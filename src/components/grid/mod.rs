@@ -1,6 +1,6 @@
 use ratatui::{
-    layout::{Alignment, Constraint, Layout, Spacing},
-    style::Style,
+    layout::{Alignment, Constraint, Layout, Rect, Spacing},
+    style::{Color, Style, Stylize},
     widgets::{Block, Borders, Padding, Paragraph, Widget},
 };
 
@@ -35,8 +35,8 @@ impl Grid {
             cols: 7,
             rows: 24,
             selected_cell: CellCoordinates {
-                x_coordinate: 1,
-                y_coordinate: 1,
+                x_coordinate: 0,
+                y_coordinate: 0,
             },
         }
     }
@@ -83,6 +83,8 @@ impl Widget for Grid {
         let row_constraints = (0..self.rows).map(|_| Constraint::Length(3));
         let vertical = Layout::vertical(row_constraints).spacing(Spacing::Overlap(1));
 
+        let mut selected_cell: Option<Rect> = None;
+
         for (col_index, chunk) in chunks.iter().enumerate() {
             let column_layout = Layout::default()
                 .direction(ratatui::layout::Direction::Vertical)
@@ -92,7 +94,6 @@ impl Widget for Grid {
             let [title_area, content_area] = column_layout.areas(*chunk);
 
             let centered_title_area = title_area.centered_vertically(Constraint::Length(1));
-
             let col_title = self.get_weekday_from_index(col_index);
             Paragraph::new(col_title)
                 .block(
@@ -108,11 +109,25 @@ impl Widget for Grid {
             for (row_index, cell) in column_cells.iter().enumerate() {
                 let is_selected = self.is_cell_selected(col_index, row_index);
 
-                Block::new()
-                    .borders(Borders::ALL)
-                    .merge_borders(ratatui::symbols::merge::MergeStrategy::Exact)
-                    .render(*cell, buf);
+                if !is_selected {
+                    Block::new()
+                        .borders(Borders::ALL)
+                        .merge_borders(ratatui::symbols::merge::MergeStrategy::Exact)
+                        .render(*cell, buf);
+                } else {
+                    selected_cell = Some(*cell);
+                }
             }
+        }
+
+        if let Some(selected_area) = selected_cell {
+            Block::new()
+                .borders(Borders::ALL)
+                .border_type(ratatui::widgets::BorderType::Thick)
+                .style(Style::new().light_green())
+                .bg(Color::DarkGray)
+                .merge_borders(ratatui::symbols::merge::MergeStrategy::Exact)
+                .render(selected_area, buf);
         }
     }
 }
